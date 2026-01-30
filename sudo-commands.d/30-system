@@ -1,0 +1,3 @@
+/usr/bin/systemctl restart sshd
+/usr/bin/systemctl reload sshd
+/usr/bin/systemctl status sshd

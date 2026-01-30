@@ -1,0 +1,7 @@
+/* ==================================
+   Sudo Manager – Scoped Layout Fixes
+   ================================== */
+
+#sudo-manager-app .sudo-page-header {
+  margin-bottom: 24px;
+}

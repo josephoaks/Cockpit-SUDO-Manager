@@ -1,0 +1,23 @@
+{
+  "menu": {
+    "index": {
+      "label": "Sudo Manager",
+      "order": 75,
+      "keywords": [
+        {
+          "matches": [
+            "sudo",
+            "sudoers",
+            "privilege",
+            "admin",
+            "permissions",
+            "access"
+          ]
+        }
+      ]
+    }
+  },
+  "requires": {
+    "superuser": true
+  }
+}
