@@ -1,0 +1,111 @@
+<!-- Toolbar -->
+<div class="pf-v6-c-toolbar pf-v6-u-mb-md">
+  <div class="pf-v6-c-toolbar__content pf-v6-u-justify-content-flex-end">
+    <div class="pf-v6-c-toolbar__item">
+      <button id="add" class="pf-v6-c-button pf-m-primary">
+        Add sudo user
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Status -->
+<div id="status" class="pf-v6-u-mb-md"></div>
+
+<!-- Rules table -->
+<div class="pf-v6-c-card">
+  <div class="pf-v6-c-card__body">
+    <table class="pf-v6-c-table pf-m-compact">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Commands</th>
+          <th>NOPASSWD</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rules"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===================== MODAL ===================== -->
+<div class="pf-v6-c-backdrop" id="modal-backdrop" hidden>
+
+  <div class="pf-v6-c-modal-box pf-m-md"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="modal-title">
+
+    <!-- Header -->
+    <header class="pf-v6-c-modal-box__header">
+      <h1 class="pf-v6-c-modal-box__title" id="modal-title"></h1>
+    </header>
+
+    <!-- Body -->
+    <div class="pf-v6-c-modal-box__body">
+      <form id="form" class="pf-v6-c-form">
+
+        <div class="pf-v6-c-form__group">
+          <label class="pf-v6-c-form__label">
+            <span class="pf-v6-c-form__label-text">User</span>
+            <input id="user" class="pf-v6-c-form-control">
+          </label>
+        </div>
+
+        <div class="pf-v6-c-form__group">
+          <label class="pf-v6-c-form__label">
+            <span class="pf-v6-c-form__label-text">Run as</span>
+            <input id="runas" class="pf-v6-c-form-control">
+          </label>
+        </div>
+
+        <div class="pf-v6-c-form__group">
+          <label class="pf-v6-c-check">
+            <input id="allow_all" type="checkbox" class="pf-v6-c-check__input">
+            <span class="pf-v6-c-check__label">Allow ALL</span>
+          </label>
+        </div>
+
+        <div class="pf-v6-c-form__group">
+          <select id="commands"
+                  multiple
+                  size="6"
+                  class="pf-v6-c-form-control">
+          </select>
+        </div>
+
+        <div class="pf-v6-c-form__group pf-v6-u-mt-sm">
+          <label class="pf-v6-c-form__label" for="custom-command">
+            <span class="pf-v6-c-form__label-text">Add custom command</span>
+          </label>
+
+          <input id="custom-command"
+                 class="pf-v6-c-form-control"
+                 placeholder="/usr/bin/systemctl reload myservice">
+
+          <button id="add-custom-command"
+                  type="button"
+                  class="pf-v6-c-button pf-m-secondary pf-v6-u-mt-sm">
+            Add command
+          </button>
+        </div>
+
+        <div class="pf-v6-c-form__group">
+          <label class="pf-v6-c-check">
+            <input id="nopasswd" type="checkbox" class="pf-v6-c-check__input">
+            <span class="pf-v6-c-check__label">NOPASSWD</span>
+          </label>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <footer class="pf-v6-c-modal-box__footer">
+      <button id="apply" class="pf-v6-c-button pf-m-primary">Save</button>
+      <button id="cancel" class="pf-v6-c-button pf-m-link">Cancel</button>
+    </footer>
+
+  </div>
+</div>

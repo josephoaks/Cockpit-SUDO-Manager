@@ -12,8 +12,18 @@ cockpit.locale();
   const PYTHON  = "/usr/bin/python3";
 
   const $ = id => document.getElementById(id);
+
   let rules = [];
   let availableCommands = [];
+  let ruleRowTemplate = null;
+
+  /* ===================== TEMPLATE LOADER ===================== */
+
+  async function loadTemplate(path) {
+    const r = await fetch(path);
+    if (!r.ok) throw new Error(`Failed to load template: ${path}`);
+    return r.text();
+  }
 
   /* ===================== COMMAND CATALOG ===================== */
 
@@ -24,7 +34,7 @@ cockpit.locale();
       [
         "sh", "-c",
         "cat /usr/share/cockpit/sudo-manager/sudo-commands.d/* " +
-        "/etc/cockpit/sudo-manager/commands.local 2>/dev/null || true"
+        "/usr/share/cockpit/sudo-manager/commands.local 2>/dev/null || true"
       ],
       { superuser: "require" }
     ).then(out => {
@@ -58,37 +68,17 @@ cockpit.locale();
 
   /* ===================== TABLE ROW ===================== */
 
-  function renderRow(rule) {
-    const tr = document.createElement("tr");
+  async function renderRow(rule) {
+    if (!ruleRowTemplate) {
+      ruleRowTemplate = await loadTemplate("templates/rule-row.html");
+    }
 
-    tr.innerHTML = `
-      <td>${rule.user}</td>
-      <td>${rule.all ? "ALL" : rule.commands.join(", ")}</td>
-      <td>${rule.nopasswd ? "Yes" : "No"}</td>
-      <td class="pf-v6-c-table__action">
-        <div class="pf-v6-c-menu pf-m-align-right">
-          <button class="pf-v6-c-menu-toggle pf-m-plain"
-                  data-user="${rule.user}"
-                  style="padding:0.25rem">
-            <svg width="1em" height="1em" viewBox="0 0 320 512"
-                 fill="currentColor">
-              <path d="M40 256a40 40 0 1 0 80 0
-                       40 40 0 1 0-80 0zm80-120
-                       a40 40 0 1 0-80 0
-                       40 40 0 1 0 80 0zm0 240
-                       a40 40 0 1 0-80 0
-                       40 40 0 1 0 80 0z"/>
-            </svg>
-          </button>
-          <ul class="pf-v6-c-menu__list" hidden>
-            <li><button class="pf-v6-c-menu__item" data-action="edit" data-user="${rule.user}">Edit</button></li>
-            <li><button class="pf-v6-c-menu__item" data-action="delete" data-user="${rule.user}">Delete</button></li>
-          </ul>
-        </div>
-      </td>
-    `;
+    const html = ruleRowTemplate
+      .replaceAll("{{user}}", rule.user)
+      .replace("{{commands}}", rule.all ? "ALL" : rule.commands.join(", "))
+      .replace("{{nopasswd}}", rule.nopasswd ? "Yes" : "No");
 
-    $("rules").appendChild(tr);
+    $("rules").insertAdjacentHTML("beforeend", html);
   }
 
   /* ===================== MENU HANDLING ===================== */
@@ -118,7 +108,8 @@ cockpit.locale();
   /* ===================== MODAL ===================== */
 
   function openModal(rule = null) {
-    $("modal").hidden = false;
+    $("modal-backdrop").hidden = false;
+    document.body.classList.add("pf-v6-c-backrop__open");
     $("commands").textContent = "";
 
     availableCommands.forEach(cmd => {
@@ -150,7 +141,8 @@ cockpit.locale();
   }
 
   function closeModal() {
-    $("modal").hidden = true;
+    $("modal-backdrop").hidden = true;
+    document.body.classList.remove("pf-v6-c-backdrop__open");
   }
 
   function toggleCommands() {
@@ -191,68 +183,88 @@ cockpit.locale();
      .catch(err => alert(err.message));
   }
 
+  /* ===================== CUSTOM COMMANDS ===================== */
+
+  function saveCustomCommand(cmd) {
+    const path = "/usr/share/cockpit/sudo-manager/commands.local";
+    const file = cockpit.file(path, { superuser: "require" });
+
+    file.read()
+      .catch(() => "")
+      .then(content => {
+        const lines = content.split("\n").filter(Boolean);
+
+        if (lines.includes(cmd) || availableCommands.includes(cmd)) {
+          selectCommandInUI(cmd);
+          return null;
+        }
+
+        return file.replace(content + cmd + "\n");
+      })
+      .then(result => {
+        if (result === null) return;
+
+        availableCommands.push(cmd);
+        addCommandToUI(cmd);
+      })
+      .catch(err => {
+        alert("Failed to save command: " + err.message);
+      });
+  }
+
+  function addCommandToUI(cmd) {
+    const o = document.createElement("option");
+    o.value = cmd;
+    o.textContent = cmd;
+    o.selected = true;
+    $("commands").appendChild(o);
+  }
+
+  function selectCommandInUI(cmd) {
+    [...$("commands").options].forEach(o => {
+      if (o.value === cmd) o.selected = true;
+    });
+  }
+
   /* ===================== RENDER ===================== */
 
-  function render() {
+  async function render() {
     const root = $("sudo-manager-app");
-    root.replaceChildren();
 
-    root.insertAdjacentHTML("afterbegin", `
-      <div class="pf-v6-c-toolbar pf-v6-u-mb-md">
-        <div class="pf-v6-c-toolbar__content pf-v6-u-justify-content-flex-end">
-	  <div class="pf-v6-c-toolbar__item">
-            <button id="add" class="pf-v6-c-button pf-m-primary">
-	      Add sudo user
-	    </button>
-	  </div>
-        </div>
-      </div>
+    try {
+      root.innerHTML = await loadTemplate("templates/main.html");
 
-      <div id="status" class="pf-v6-u-mb-md"></div>
+      $("add").onclick = () => openModal();
+      $("apply").onclick = applyRule;
+      $("cancel").onclick = closeModal;
+      $("allow_all").onchange = toggleCommands;
 
-      <div class="pf-v6-c-card">
-        <div class="pf-v6-c-card__body">
-          <table class="pf-v6-c-table pf-m-compact">
-            <thead>
-              <tr><th>User</th><th>Commands</th><th>NOPASSWD</th><th></th></tr>
-            </thead>
-            <tbody id="rules"></tbody>
-          </table>
-        </div>
-      </div>
+      $("add-custom-command").onclick = () => {
+        const input = $("custom-command");
+        const cmd = input.value.trim();
+        if (!cmd) return;
 
-      <div class="pf-v6-c-modal pf-m-md" id="modal" hidden>
-        <div class="pf-v6-c-modal__content">
-          <header class="pf-v6-c-modal__header">
-            <h1 id="modal-title"></h1>
-            <button id="modal-close" class="pf-v6-c-button pf-m-plain">✕</button>
-          </header>
+        if (!cmd.startsWith("/")) {
+          alert("Command must be an absolute path");
+          return;
+        }
 
-          <section class="pf-v6-c-modal__body">
-            <form id="form" class="pf-v6-c-form">
-              <label>User <input id="user" class="pf-v6-c-form-control"></label>
-              <label>Run as <input id="runas" class="pf-v6-c-form-control"></label>
-              <label><input id="allow_all" type="checkbox"> Allow ALL</label>
-              <select id="commands" multiple size="6" class="pf-v6-c-form-control"></select>
-              <label><input id="nopasswd" type="checkbox"> NOPASSWD</label>
-            </form>
-          </section>
+        if (/[;&|$`]|&&|\|\|/.test(cmd)) {
+          alert("Unsafe characters in command");
+          return;
+        }
 
-          <footer class="pf-v6-c-modal__footer">
-            <button id="apply" class="pf-v6-c-button pf-m-primary">Save</button>
-            <button id="cancel" class="pf-v6-c-button pf-m-link">Cancel</button>
-          </footer>
-        </div>
-      </div>
-    `);
+        saveCustomCommand(cmd);
+        input.value = "";
+      };
 
-    $("add").onclick = () => openModal();
-    $("apply").onclick = applyRule;
-    $("cancel").onclick = closeModal;
-    $("modal-close").onclick = closeModal;
-    $("allow_all").onchange = toggleCommands;
+      await loadCommandCatalog();
+      loadRules();
 
-    loadCommandCatalog().then(loadRules);
+    } catch (err) {
+      console.error(err);
+      root.textContent = "Failed to load UI";
+    }
   }
 
   render();

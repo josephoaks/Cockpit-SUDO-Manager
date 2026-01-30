@@ -5,3 +5,15 @@
 #sudo-manager-app .sudo-page-header {
   margin-bottom: 24px;
 }
+
+<style>
+  /* Cockpit static modal centering fix */
+  #modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 3000;
+  }
+</style>

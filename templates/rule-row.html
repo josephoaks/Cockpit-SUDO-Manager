@@ -1,0 +1,26 @@
+<tr>
+  <td>{{user}}</td>
+  <td>{{commands}}</td>
+  <td>{{nopasswd}}</td>
+  <td class="pf-v6-c-table__action">
+    <div class="pf-v6-c-menu pf-m-align-right">
+      <button class="pf-v6-c-menu-toggle pf-m-plain"
+              data-user="{{user}}"
+              style="padding:0.25rem">
+        <svg width="1em" height="1em" viewBox="0 0 320 512"
+             fill="currentColor">
+          <path d="M40 256a40 40 0 1 0 80 0
+                   40 40 0 1 0-80 0zm80-120
+                   a40 40 0 1 0-80 0
+                   40 40 0 1 0 80 0zm0 240
+                   a40 40 0 1 0-80 0
+                   40 40 0 1 0 80 0z"/>
+        </svg>
+      </button>
+      <ul class="pf-v6-c-menu__list" hidden>
+        <li><button class="pf-v6-c-menu__item" data-action="edit" data-user="{{user}}">Edit</button></li>
+        <li><button class="pf-v6-c-menu__item" data-action="delete" data-user="{{user}}">Delete</button></li>
+      </ul>
+    </div>
+  </td>
+</tr>
