@@ -27,30 +27,62 @@ cockpit.locale();
 
   /* ===================== COMMAND CATALOG ===================== */
 
-  function loadCommandCatalog() {
+  async function loadCommandCatalog() {
     availableCommands = [];
 
-    return cockpit.spawn(
-      [
-        "sh", "-c",
-        "cat /usr/share/cockpit/sudo-manager/sudo-commands.d/* " +
-        "/usr/share/cockpit/sudo-manager/commands.local 2>/dev/null || true"
-      ],
-      { superuser: "require" }
-    ).then(out => {
-      out.split("\n").forEach(c => {
-        c = c.trim();
-        if (c && !availableCommands.includes(c)) {
-          availableCommands.push(c);
-        }
+    const out = await cockpit.spawn(
+      [PYTHON, BACKEND, "catalog"],
+      { superuser: "require", err: "message" }
+    );
+
+    const catalog = JSON.parse(out);
+    populateCommandSelect(catalog);
+
+    Object.values(catalog).forEach(section => {
+      Object.keys(section.command_aliases || {}).forEach(a => {
+        if (!availableCommands.includes(a)) availableCommands.push(a);
       });
+      (section.raw_commands || []).forEach(c => {
+        if (!availableCommands.includes(c)) availableCommands.push(c);
+      });
+    });
+  }
+
+  function populateCommandSelect(catalog) {
+    const select = $("commands");
+    if (!select) return;
+
+    select.textContent = "";
+
+    Object.entries(catalog).forEach(([category, section]) => {
+      const group = document.createElement("optgroup");
+      group.label = category;
+
+      Object.keys(section.command_aliases || {}).forEach(alias => {
+        const o = document.createElement("option");
+        o.value = alias;
+        o.textContent = alias;
+        group.appendChild(o);
+      });
+
+      (section.raw_commands || []).forEach(cmd => {
+        const o = document.createElement("option");
+        o.value = cmd;
+        o.textContent = cmd;
+        group.appendChild(o);
+      });
+
+      select.appendChild(group);
     });
   }
 
   /* ===================== LOAD RULES ===================== */
 
   function loadRules() {
-    $("rules").textContent = "";
+    const table = document.querySelector(".sudo-rules-table");
+    if (!table) return;
+
+    table.querySelectorAll(".sudo-rule-body").forEach(tb => tb.remove());
     $("status").textContent = "Loading sudo rules…";
 
     cockpit.spawn(
@@ -66,19 +98,26 @@ cockpit.locale();
     });
   }
 
-  /* ===================== TABLE ROW ===================== */
+  /* ===================== RENDER ROW ===================== */
 
   async function renderRow(rule) {
     if (!ruleRowTemplate) {
       ruleRowTemplate = await loadTemplate("templates/rule-row.html");
     }
 
+    const commandsText = rule.all
+      ? "ALL"
+      : rule.commands.join(", ");
+
     const html = ruleRowTemplate
       .replaceAll("{{user}}", rule.user)
-      .replace("{{commands}}", rule.all ? "ALL" : rule.commands.join(", "))
+      .replace("{{commands}}", commandsText)
       .replace("{{nopasswd}}", rule.nopasswd ? "Yes" : "No");
 
-    $("rules").insertAdjacentHTML("beforeend", html);
+    const table = document.querySelector(".sudo-rules-table");
+    if (!table) return;
+
+    table.insertAdjacentHTML("beforeend", html);
   }
 
   /* ===================== MENU HANDLING ===================== */
@@ -109,15 +148,9 @@ cockpit.locale();
 
   function openModal(rule = null) {
     $("modal-backdrop").hidden = false;
-    document.body.classList.add("pf-v6-c-backrop__open");
-    $("commands").textContent = "";
+    document.body.classList.add("pf-v6-c-backdrop__open");
 
-    availableCommands.forEach(cmd => {
-      const o = document.createElement("option");
-      o.value = cmd;
-      o.textContent = cmd;
-      $("commands").appendChild(o);
-    });
+    [...$("commands").options].forEach(o => o.selected = false);
 
     if (rule) {
       $("modal-title").textContent = `Edit sudo rule for ${rule.user}`;
@@ -146,20 +179,32 @@ cockpit.locale();
   }
 
   function toggleCommands() {
-    $("commands").disabled = $("allow_all").checked;
+    const disabled = $("allow_all").checked;
+    $("commands").disabled = disabled;
+    if (disabled) {
+      [...$("commands").options].forEach(o => o.selected = false);
+    }
   }
 
   /* ===================== APPLY ===================== */
 
   function applyRule() {
     const user = $("user").value.trim();
-    if (!user) return alert("User is required");
+    if (!user) {
+      alert("User is required");
+      return;
+    }
 
     const runas = $("runas").value || "root";
     const mode  = $("nopasswd").checked ? "nopasswd" : "passwd";
-    const cmds  = $("allow_all").checked
-      ? "ALL"
-      : [...$("commands").selectedOptions].map(o => o.value).join(", ");
+    const selected = [...$("commands").selectedOptions].map(o => o.value);
+
+    if (!$("allow_all").checked && selected.length === 0) {
+      alert("Select at least one command or choose Allow ALL");
+      return;
+    }
+
+    const cmds = $("allow_all").checked ? "ALL" : selected.join(", ");
 
     cockpit.spawn(
       [PYTHON, BACKEND, "update", user, runas, mode, cmds],
@@ -207,9 +252,7 @@ cockpit.locale();
         availableCommands.push(cmd);
         addCommandToUI(cmd);
       })
-      .catch(err => {
-        alert("Failed to save command: " + err.message);
-      });
+      .catch(err => alert("Failed to save command: " + err.message));
   }
 
   function addCommandToUI(cmd) {

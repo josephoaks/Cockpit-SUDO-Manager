@@ -9,17 +9,6 @@
 #   - No system lifecycle actions
 
 # ==========================================================
-# Sudo defaults (audit + safety)
-# ==========================================================
-Defaults use_pty
-Defaults logfile="/var/log/sudo.log"
-Defaults log_input, log_output
-Defaults timestamp_timeout=5
-Defaults !visiblepw
-Defaults requiretty
-Defaults secure_path="/usr/sbin:/usr/bin:/sbin:/bin"
-
-# ==========================================================
 # Read-only system inspection
 # ==========================================================
 Cmnd_Alias SYSINFO_READ = \

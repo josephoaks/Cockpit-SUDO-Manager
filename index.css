@@ -2,18 +2,58 @@
    Sudo Manager – Scoped Layout Fixes
    ================================== */
 
+/* Page header spacing */
 #sudo-manager-app .sudo-page-header {
   margin-bottom: 24px;
 }
 
-<style>
-  /* Cockpit static modal centering fix */
-  #modal-backdrop {
-    position: fixed !important;
-    inset: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: 3000;
-  }
-</style>
+/* ================================
+   Modal centering (Cockpit static modal fix)
+   ================================ */
+
+#modal-backdrop[hidden] {
+  display: none;
+}
+
+#modal-backdrop:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+/* ================================
+   Sudo rules table – VISUAL SEPARATION
+   (PatternFly Card SAFE)
+   ================================ */
+
+/* Cell spacing */
+.sudo-rules-table tbody.sudo-rule-body td,
+.sudo-rules-table tbody.sudo-rule-body th {
+  padding: 1rem;
+  vertical-align: top;
+}
+
+/* HARD separator between users
+   Use inset box-shadow (borders are clipped by PF cards) */
+.sudo-rules-table
+tbody.sudo-rule-body + tbody.sudo-rule-body
+tr:first-child td,
+.sudo-rules-table
+tbody.sudo-rule-body + tbody.sudo-rule-body
+tr:first-child th {
+  box-shadow: inset 0 3px 0 0 var(--pf-v6-global--primary-color--100);
+}
+
+/* Optional subtle background alternation */
+.sudo-rules-table
+tbody.sudo-rule-body:nth-of-type(even) tr {
+  background-color: var(--pf-v6-global--BackgroundColor--200);
+}
+
+/* Improve command readability */
+.sudo-rules-table td.sudo-commands {
+  line-height: 1.4;
+}

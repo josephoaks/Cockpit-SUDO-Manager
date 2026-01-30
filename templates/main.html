@@ -15,7 +15,7 @@
 <!-- Rules table -->
 <div class="pf-v6-c-card">
   <div class="pf-v6-c-card__body">
-    <table class="pf-v6-c-table pf-m-compact">
+    <table id="rules-table" class="pf-v6-c-table sudo-rules-table">
       <thead>
         <tr>
           <th>User</th>
@@ -24,7 +24,8 @@
           <th></th>
         </tr>
       </thead>
-      <tbody id="rules"></tbody>
+      <!-- Each rule-row.html renders its own <tbody> -->
+      <!-- <tbody id="rules"></tbody> -->
     </table>
   </div>
 </div>
@@ -67,12 +68,22 @@
           </label>
         </div>
 
-        <div class="pf-v6-c-form__group">
+	<div class="pf-v6-c-form__group">
+          <label class="pf-v6-c-form__label" for="commands">
+            <span class="pf-v6-c-form__label-text">Commands</span>
+          </label>
+
           <select id="commands"
                   multiple
-                  size="6"
-                  class="pf-v6-c-form-control">
+                  size="8"
+                  class="pf-v6-c-form-control"
+                  aria-describedby="commands-help">
           </select>
+
+          <div id="commands-help"
+               class="pf-v6-c-form__helper-text">
+            Select one or more commands or aliases defined by sudo policy.
+          </div>
         </div>
 
         <div class="pf-v6-c-form__group pf-v6-u-mt-sm">
