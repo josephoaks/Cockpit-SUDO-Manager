@@ -8,29 +8,14 @@
 }
 
 /* ================================
-   Modal centering (Cockpit static modal fix)
+   Modal centering
    ================================ */
 
-/* --- User modal --- */
-#modal-backdrop[hidden] {
+.pf-v6-c-backdrop[hidden] {
   display: none;
 }
 
-#modal-backdrop:not([hidden]) {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3000;
-}
-
-/* --- Alias modal --- */
-#alias-modal-backdrop[hidden] {
-  display: none;
-}
-
-#alias-modal-backdrop:not([hidden]) {
+.pf-v6-c-backdrop:not([hidden]) {
   position: fixed;
   inset: 0;
   display: flex;
@@ -71,4 +56,19 @@ tbody.sudo-rule-body:nth-of-type(even) tr {
 /* Improve command readability */
 .sudo-rules-table td.sudo-commands {
   line-height: 1.4;
+}
+
+/* Ensure Add menu toggle does not resize when opened */
+.sudo-add-menu {
+  --pf-v6-c-menu--MinWidth: max-content;
+}
+
+.sudo-add-menu .pf-v6-c-menu-toggle {
+  width: max-content;
+  min-width: 10rem;
+}
+
+.sudo-alias {
+  text-decoration: underline dotted;
+  cursor: help;
 }

@@ -1,321 +1,230 @@
+/*
+ * index.js
+ * Core Orchestration
+*/
+"use strict";
+
 cockpit.locale();
 
-(function () {
-  "use strict";
+import { $, qsa } from "./js/dom.js";
+import { loadTemplate } from "./js/templates.js";
+import { loadCommandCatalog } from "./js/catalog.js";
+import { showModal, hideModal, MODALS } from "./js/registry.js";
+import { spawnBackend } from "./js/backend.js";
+import { initMenus } from "./js/menu.js";
+import { createModal } from "./js/modal_factory.js";
 
-  if (typeof cockpit === "undefined") {
-    alert("Cockpit API not loaded");
+let rules = [];
+let ruleRowTemplate = null;
+let aliasMap = {};
+
+/* ===================== LOAD RULES ===================== */
+
+async function loadRules() {
+  const table = document.querySelector(".sudo-rules-table");
+  if (!table) return;
+
+  table.querySelectorAll(".sudo-rule-body").forEach(tb => tb.remove());
+  $("status").textContent = "Loading sudo rules…";
+
+  try {
+    const out = await spawnBackend(["list"]);
+    rules = JSON.parse(out) || [];
+
+    for (const rule of rules) {
+      await renderRow(rule);
+    }
+
+    $("status").textContent = "Loaded sudo rules";
+  } catch (err) {
+    console.error(err);
+    $("status").textContent = "Failed to load sudo rules";
+  }
+}
+
+/* ===================== RENDER CMDS ==================== */
+
+function renderCommands(cmds) {
+  if (!cmds || cmds.length === 0) {
+    return "ALL";
+  }
+
+  return cmds.map(cmd => {
+    if (!aliasMap[cmd]) {
+      return cmd;
+    }
+
+    const tooltip = aliasMap[cmd].join("\n");
+    return `<span class="sudo-alias" title="${tooltip}">${cmd}</span>`;
+  }).join(", ");
+}
+
+
+/* ===================== RENDER ROW ===================== */
+
+async function renderRow(rule) {
+  if (!ruleRowTemplate) {
+    ruleRowTemplate = await loadTemplate("./templates/rule-row.html");
+  }
+
+  const html = ruleRowTemplate
+    .replaceAll("{{user}}", rule.user)
+    .replace("{{commands}}", "")
+    .replace("{{nopasswd}}", rule.nopasswd ? "Yes" : "No");
+
+  const table = document.querySelector(".sudo-rules-table");
+  table.insertAdjacentHTML("beforeend", html);
+
+  // CORRECT: grab the row we just inserted
+  const row = table.lastElementChild;
+  if (!row) return;
+
+  const commandsCell = row.querySelector(".sudo-commands");
+  if (!commandsCell) return;
+
+  commandsCell.textContent = "";
+
+  if (rule.all) {
+    commandsCell.textContent = "ALL";
     return;
   }
 
-  const BACKEND = "/usr/share/cockpit/sudo-manager/backend/sudo-manager.py";
-  const PYTHON  = "/usr/bin/python3";
-
-  const $ = id => document.getElementById(id);
-
-  let rules = [];
-  let availableCommands = [];
-  let ruleRowTemplate = null;
-
-  /* ===================== TEMPLATE LOADER ===================== */
-
-  async function loadTemplate(path) {
-    const r = await fetch(path);
-    if (!r.ok) throw new Error(`Failed to load template: ${path}`);
-    return r.text();
-  }
-
-  /* ===================== COMMAND CATALOG ===================== */
-
-  async function loadCommandCatalog() {
-    availableCommands = [];
-
-    const out = await cockpit.spawn(
-      [PYTHON, BACKEND, "catalog"],
-      { superuser: "require", err: "message" }
-    );
-
-    const catalog = JSON.parse(out);
-    populateCommandSelect(catalog);
-
-    Object.values(catalog).forEach(section => {
-      Object.keys(section.command_aliases || {}).forEach(a => {
-        if (!availableCommands.includes(a)) availableCommands.push(a);
-      });
-      (section.raw_commands || []).forEach(c => {
-        if (!availableCommands.includes(c)) availableCommands.push(c);
-      });
-    });
-  }
-
-  function populateCommandSelect(catalog) {
-    const select = $("commands");
-    if (!select) return;
-
-    select.textContent = "";
-
-    Object.entries(catalog).forEach(([category, section]) => {
-      const group = document.createElement("optgroup");
-      group.label = category;
-
-      Object.keys(section.command_aliases || {}).forEach(alias => {
-        const o = document.createElement("option");
-        o.value = alias;
-        o.textContent = alias;
-        group.appendChild(o);
-      });
-
-      (section.raw_commands || []).forEach(cmd => {
-        const o = document.createElement("option");
-        o.value = cmd;
-        o.textContent = cmd;
-        group.appendChild(o);
-      });
-
-      select.appendChild(group);
-    });
-  }
-
-  /* ===================== LOAD RULES ===================== */
-
-  function loadRules() {
-    const table = document.querySelector(".sudo-rules-table");
-    if (!table) return;
-
-    table.querySelectorAll(".sudo-rule-body").forEach(tb => tb.remove());
-    $("status").textContent = "Loading sudo rules…";
-
-    cockpit.spawn(
-      [PYTHON, BACKEND, "list"],
-      { superuser: "require", err: "message" }
-    ).then(out => {
-      rules = JSON.parse(out) || [];
-      rules.forEach(renderRow);
-      $("status").textContent = "Loaded sudo rules";
-    }).catch(err => {
-      console.error("LIST FAILED:", err);
-      $("status").textContent = "Failed to load sudo rules";
-    });
-  }
-
-  /* ===================== RENDER ROW ===================== */
-
-  async function renderRow(rule) {
-    if (!ruleRowTemplate) {
-      ruleRowTemplate = await loadTemplate("./templates/rule-row.html");
+  rule.commands.forEach((cmd, i) => {
+    if (i > 0) {
+      commandsCell.appendChild(document.createTextNode(", "));
     }
 
-    const commandsText = rule.all
-      ? "ALL"
-      : rule.commands.join(", ");
-
-    const html = ruleRowTemplate
-      .replaceAll("{{user}}", rule.user)
-      .replace("{{commands}}", commandsText)
-      .replace("{{nopasswd}}", rule.nopasswd ? "Yes" : "No");
-
-    const table = document.querySelector(".sudo-rules-table");
-    if (!table) return;
-
-    table.insertAdjacentHTML("beforeend", html);
-  }
-
-  /* ===================== MENU HANDLING ===================== */
-
-  document.addEventListener("click", e => {
-    const toggle = e.target.closest(".pf-v6-c-menu-toggle");
-    const item   = e.target.closest(".pf-v6-c-menu__item");
-
-    document.querySelectorAll(".pf-v6-c-menu__list")
-      .forEach(m => m.hidden = true);
-
-    if (toggle) {
-      toggle.nextElementSibling.hidden = false;
-      e.stopPropagation();
-      return;
-    }
-
-    if (item) {
-      const user = item.dataset.user;
-      const rule = rules.find(r => r.user === user);
-
-      if (item.dataset.action === "edit") openModal(rule);
-      if (item.dataset.action === "delete") deleteRule(user);
+    if (aliasMap[cmd]) {
+      const span = document.createElement("span");
+      span.className = "sudo-alias";
+      span.textContent = cmd;
+      span.title = aliasMap[cmd].join("\n");
+      commandsCell.appendChild(span);
+    } else {
+      commandsCell.appendChild(document.createTextNode(cmd));
     }
   });
+}
 
-  /* ===================== USER MODAL ===================== */
 
-  function openModal(rule = null) {
-    $("modal-backdrop").hidden = false;
-    document.body.classList.add("pf-v6-c-backdrop__open");
+/* ===================== MENU HANDLING ===================== */
 
-    [...$("commands").options].forEach(o => o.selected = false);
+document.addEventListener("click", e => {
+  const item = e.target.closest(".pf-v6-c-menu__item");
+  if (!item) return;
 
-    if (rule) {
-      $("modal-title").textContent = `Edit sudo rule for ${rule.user}`;
-      $("user").value = rule.user;
-      $("runas").value = rule.runas;
-      $("nopasswd").checked = rule.nopasswd;
-      $("allow_all").checked = rule.all;
+  const action = item.dataset.action;
+  const user   = item.dataset.user;
 
-      if (!rule.all) {
-        [...$("commands").options].forEach(o => {
-          if (rule.commands.includes(o.value)) o.selected = true;
-        });
-      }
-    } else {
-      $("modal-title").textContent = "Add sudo rule";
-      $("form").reset();
-      $("runas").value = "root";
-    }
-
-    toggleCommands();
+  if (action === "add-user") {
+    showModal("user", null, () => {
+      hideModal("user");
+      loadRules();
+    });
+    return;
   }
 
-  function closeModal() {
-    $("modal-backdrop").hidden = true;
-    document.body.classList.remove("pf-v6-c-backdrop__open");
-  }
-
-  function toggleCommands() {
-    const disabled = $("allow_all").checked;
-    $("commands").disabled = disabled;
-    if (disabled) {
-      [...$("commands").options].forEach(o => o.selected = false);
-    }
-  }
-
-  /* ===================== ALIAS MODAL ===================== */
-
-  function openAliasModal() {
-    $("alias-modal-backdrop").hidden = false;
-    document.body.classList.add("pf-v6-c-backdrop__open");
-  }
-
-  function closeAliasModal() {
-    $("alias-modal-backdrop").hidden = true;
-    document.body.classList.remove("pf-v6-c-backdrop__open");
-  }
-
-  function applyAlias() {
-    const type = $("alias-type").value;
-    const name = $("alias-name").value.trim();
-    const members = $("alias-members").value
-      .split("\n")
-      .map(m => m.trim())
-      .filter(Boolean);
-
-    if (!type) return alert("Alias type is required");
-    if (!name) return alert("Alias name is required");
-    if (members.length === 0) return alert("At least one alias member is required");
-
-    cockpit.spawn(
-      [PYTHON, BACKEND, "add-alias", type, name, ...members],
-      { superuser: "require", err: "message" }
-    )
-    .then(() => {
-      $("alias-form").reset();
-      closeAliasModal();
+  if (action === "add-alias") {
+    showModal("alias", null, () => {
+      hideModal("alias");
       loadCommandCatalog();
-    })
-    .catch(err => {
-      alert(err.message || err);
     });
+    return;
   }
 
-  /* ===================== APPLY USER RULE ===================== */
-
-  function applyRule() {
-    const user = $("user").value.trim();
-    if (!user) return alert("User is required");
-
-    const runas = $("runas").value || "root";
-    const mode  = $("nopasswd").checked ? "nopasswd" : "passwd";
-    const selected = [...$("commands").selectedOptions].map(o => o.value);
-
-    if (!$("allow_all").checked && selected.length === 0) {
-      return alert("Select at least one command or choose Allow ALL");
-    }
-
-    const cmds = $("allow_all").checked ? "ALL" : selected.join(", ");
-
-    cockpit.spawn(
-      [PYTHON, BACKEND, "update", user, runas, mode, cmds],
-      { superuser: "require", err: "message" }
-    )
-    .then(() => {
-      closeModal();
+  if (action === "add-group") {
+    showModal("group", null, () => {
+      hideModal("group");
       loadRules();
-    })
-    .catch(err => {
-      alert(err.message || "Failed to save sudo rule");
     });
+    return;
   }
 
-  function deleteRule(user) {
-    if (!confirm(`Delete sudo rule for ${user}?`)) return;
-
-    cockpit.spawn(
-      [PYTHON, BACKEND, "delete", user],
-      { superuser: "require", err: "message" }
-    )
-    .then(loadRules)
-    .catch(err => alert(err.message));
-  }
-
-  /* ===================== RENDER ===================== */
-
-  async function render() {
-    const root = $("sudo-manager-app");
-
-    try {
-      root.innerHTML = await loadTemplate("./templates/main.html");
-
-      const addUser = $("add");
-      if (addUser) addUser.onclick = () => openModal();
-
-      const addAlias = $("add-alias");
-      if (addAlias) addAlias.onclick = () => openAliasModal();
-
-      const apply = $("apply");
-      if (apply) apply.onclick = applyRule;
-
-      const cancel = $("cancel");
-      if (cancel) cancel.onclick = closeModal;
-
-      const aliasSave = $("alias-save");
-      if (aliasSave) aliasSave.onclick = applyAlias;
-
-      const aliasCancel = $("alias-cancel");
-      if (aliasCancel) aliasCancel.onclick = closeAliasModal;
-
-      const allowAll = $("allow_all");
-      if (allowAll) allowAll.onchange = toggleCommands;
-
-      const addCmd = $("add-custom-command");
-      if (addCmd) {
-        addCmd.onclick = () => {
-          const input = $("custom-command");
-          const cmd = input.value.trim();
-          if (!cmd) return;
-
-          if (!cmd.startsWith("/")) return alert("Command must be an absolute path");
-          if (/[;&|$`]|&&|\|\|/.test(cmd)) return alert("Unsafe characters");
-
-          saveCustomCommand(cmd);
-          input.value = "";
-        };
-      }
-
-      await loadCommandCatalog();
-      loadRules();
-
-    } catch (err) {
-      console.error(err);
-      root.textContent = "Failed to load UI";
+  if (action === "edit") {
+    const rule = rules.find(r => r.user === user);
+    if (rule) {
+      showModal("user", rule, () => {
+        hideModal("user");
+        loadRules();
+      });
     }
   }
+});
 
-  render();
+/* ===================== MODAL BOOTSTRAP ===================== */
+/*
+ * This replaces static modal markup in main.html
+ * Modals are created ONCE, safely, at init time.
+ */
+
+function initModals() {
+  /* USER MODAL */
+  createModal({
+    id: "modal-backdrop",
+    title: "",
+    body: document
+      .getElementById("user-form-template")
+      .content.cloneNode(true),
+    onSave: () => MODALS.user.apply(() => {
+      hideModal("user");
+      loadRules();
+    }),
+    onCancel: () => hideModal("user")
+  });
+
+  /* ALIAS MODAL */
+  createModal({
+    id: "alias-modal-backdrop",
+    title: "Add Alias",
+    body: document
+      .getElementById("alias-form-template")
+      .content.cloneNode(true),
+    onSave: () => MODALS.alias.apply(() => {
+      hideModal("alias");
+      loadCommandCatalog();
+    }),
+    onCancel: () => hideModal("alias")
+  });
+
+  /* GROUP MODAL */
+  createModal({
+    id: "group-modal-backdrop",
+    title: "Add Sudo Group",
+    body: document
+      .getElementById("group-form-template")
+      .content.cloneNode(true),
+    onSave: () => MODALS.group.apply(() => {
+      hideModal("group");
+      loadRules();
+    }),
+    onCancel: () => hideModal("group")
+  });
+}
+
+/* ===================== INIT ===================== */
+
+(async function render() {
+  const root = $("sudo-manager-app");
+
+  try {
+    root.innerHTML = await loadTemplate("./templates/main.html");
+
+    initMenus();
+    initModals();   // <<< NEW (critical)
+
+    const catalog = await loadCommandCatalog();
+
+    aliasMap = {};
+    Object.values(catalog).forEach(section => {
+      Object.entries(section.command_aliases || {}).forEach(([alias, cmds]) => {
+        aliasMap[alias] = cmds;
+      });
+    });
+
+    await loadRules();
+
+  } catch (err) {
+    console.error(err);
+    root.textContent = "Failed to load UI";
+  }
 })();

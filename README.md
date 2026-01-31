@@ -51,10 +51,6 @@ The plugin is designed to:
 
 The following items are **actively planned or under development**:
 
-- **Group-based rules**
-  - POSIX groups
-  - Clear user vs group distinction in UI
-
 - **Advanced sudo options**
   - `NOEXEC`
   - `SETENV`

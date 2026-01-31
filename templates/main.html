@@ -2,12 +2,36 @@
 <div class="pf-v6-c-toolbar pf-v6-u-mb-md">
   <div class="pf-v6-c-toolbar__content pf-v6-u-justify-content-flex-end">
     <div class="pf-v6-c-toolbar__item">
-      <button id="add-user" class="pf-v6-c-button pf-m-primary">
-        Add sudo user
-      </button>
-      <button id="add-alias" class="pf-v6-c-button pf-m-primary">
-        Add Alias
-      </button>
+
+      <!-- Add menu -->
+      <div class="pf-v6-c-menu pf-v6-c-menu--align-right sudo-add-menu">
+        <button
+          class="pf-v6-c-button pf-m-primary pf-v6-c-menu-toggle"
+          type="button"
+          aria-expanded="false">
+          Add
+          <span class="pf-v6-c-menu-toggle__icon"></span>
+        </button>
+
+        <ul class="pf-v6-c-menu__list" hidden>
+          <li class="pf-v6-c-menu__list-item">
+            <button class="pf-v6-c-menu__item" data-action="add-user">
+              Add Sudo User
+            </button>
+          </li>
+          <li class="pf-v6-c-menu__list-item">
+            <button class="pf-v6-c-menu__item" data-action="add-group">
+              Add Sudo Group
+            </button>
+          </li>
+          <li class="pf-v6-c-menu__list-item">
+            <button class="pf-v6-c-menu__item" data-action="add-alias">
+              Add Sudo Alias
+            </button>
+          </li>
+        </ul>
+      </div>
+
     </div>
   </div>
 </div>
@@ -18,7 +42,7 @@
 <!-- Rules table -->
 <div class="pf-v6-c-card">
   <div class="pf-v6-c-card__body">
-    <table id="rules-table" class="pf-v6-c-table sudo-rules-table">
+    <table class="pf-v6-c-table sudo-rules-table">
       <thead>
         <tr>
           <th>User</th>
@@ -27,156 +51,188 @@
           <th></th>
         </tr>
       </thead>
-      <!-- Each rule-row.html renders its own <tbody> -->
-      <!-- <tbody id="rules"></tbody> -->
     </table>
   </div>
 </div>
 
-<!-- ===================== USER MODAL ===================== -->
-<div class="pf-v6-c-backdrop" id="modal-backdrop" hidden>
+<!-- ===================================================== -->
+<!-- ===================== TEMPLATES ===================== -->
+<!-- ===================================================== -->
 
-  <div class="pf-v6-c-modal-box pf-m-md"
-       role="dialog"
-       aria-modal="true"
-       aria-labelledby="modal-title">
+<!-- ===================== MODAL SHELL TEMPLATE ===================== -->
+<template id="modal-shell-template">
+  <div class="pf-v6-c-backdrop" hidden>
+    <div class="pf-v6-c-modal-box pf-m-md"
+         role="dialog"
+         aria-modal="true">
 
-    <!-- Header -->
-    <header class="pf-v6-c-modal-box__header">
-      <h1 class="pf-v6-c-modal-box__title" id="modal-title"></h1>
-    </header>
+      <header class="pf-v6-c-modal-box__header">
+        <h1 class="pf-v6-c-modal-box__title"></h1>
+      </header>
 
-    <!-- Body -->
-    <div class="pf-v6-c-modal-box__body">
-      <form id="form" class="pf-v6-c-form">
+      <div class="pf-v6-c-modal-box__body"></div>
 
-        <div class="pf-v6-c-form__group">
-          <label class="pf-v6-c-form__label">
-            <span class="pf-v6-c-form__label-text">User</span>
-            <input id="user" class="pf-v6-c-form-control">
-          </label>
-        </div>
+      <footer class="pf-v6-c-modal-box__footer">
+        <button class="pf-v6-c-button pf-m-primary modal-apply">
+          Save
+        </button>
+        <button class="pf-v6-c-button pf-m-link modal-cancel">
+          Cancel
+        </button>
+      </footer>
 
-        <div class="pf-v6-c-form__group">
-          <label class="pf-v6-c-form__label">
-            <span class="pf-v6-c-form__label-text">Run as</span>
-            <input id="runas" class="pf-v6-c-form-control">
-          </label>
-        </div>
+    </div>
+  </div>
+</template>
 
-        <div class="pf-v6-c-form__group">
-          <label class="pf-v6-c-check">
-            <input id="allow_all" type="checkbox" class="pf-v6-c-check__input">
-            <span class="pf-v6-c-check__label">Allow ALL</span>
-          </label>
-        </div>
+<!-- ===================== USER FORM TEMPLATE ===================== -->
+<template id="user-form-template">
+  <form id="form" class="pf-v6-c-form">
 
-        <div class="pf-v6-c-form__group">
-          <label class="pf-v6-c-form__label" for="commands">
-            <span class="pf-v6-c-form__label-text">Commands</span>
-          </label>
-
-          <select id="commands"
-                  multiple
-                  size="8"
-                  class="pf-v6-c-form-control"
-                  aria-describedby="commands-help">
-          </select>
-
-          <div id="commands-help"
-               class="pf-v6-c-form__helper-text">
-            Select one or more commands or aliases defined by sudo policy.
-          </div>
-        </div>
-
-        <div class="pf-v6-c-form__group pf-v6-u-mt-sm">
-          <label class="pf-v6-c-form__label" for="custom-command">
-            <span class="pf-v6-c-form__label-text">Add custom command</span>
-          </label>
-
-          <input id="custom-command"
-                 class="pf-v6-c-form-control"
-                 placeholder="/usr/bin/systemctl reload myservice">
-
-          <button id="add-custom-command"
-                  type="button"
-                  class="pf-v6-c-button pf-m-secondary pf-v6-u-mt-sm">
-            Add command
-          </button>
-        </div>
-
-        <div class="pf-v6-c-form__group">
-          <label class="pf-v6-c-check">
-            <input id="nopasswd" type="checkbox" class="pf-v6-c-check__input">
-            <span class="pf-v6-c-check__label">NOPASSWD</span>
-          </label>
-        </div>
-
-      </form>
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-form__label">
+        <span class="pf-v6-c-form__label-text">User</span>
+        <input id="user" class="pf-v6-c-form-control">
+      </label>
     </div>
 
-    <!-- Footer -->
-    <footer class="pf-v6-c-modal-box__footer">
-      <button id="apply" class="pf-v6-c-button pf-m-primary">Save</button>
-      <button id="cancel" class="pf-v6-c-button pf-m-link">Cancel</button>
-    </footer>
-
-  </div>
-</div>
-
-<!-- ===================== ADD ALIAS MODAL ===================== -->
-<div class="pf-v6-c-backdrop" id="alias-modal-backdrop" hidden>
-
-  <div class="pf-v6-c-modal-box pf-m-md"
-       role="dialog"
-       aria-modal="true"
-       aria-labelledby="alias-modal-title">
-
-    <header class="pf-v6-c-modal-box__header">
-      <h1 class="pf-v6-c-modal-box__title" id="alias-modal-title">
-        Add Alias
-      </h1>
-    </header>
-
-    <div class="pf-v6-c-modal-box__body">
-      <form id="alias-form" class="pf-v6-c-form">
-
-        <div class="pf-v6-c-form__group">
-          <label class="pf-v6-c-form__label">
-            <span class="pf-v6-c-form__label-text">Alias type</span>
-          </label>
-          <select id="alias-type" class="pf-v6-c-form-control">
-            <option value="">Select alias type</option>
-            <option value="User_Alias">User Alias</option>
-            <option value="Runas_Alias">RunAs Alias</option>
-            <option value="Host_Alias">Host Alias</option>
-            <option value="Cmnd_Alias">Command Alias</option>
-          </select>
-        </div>
-
-        <div class="pf-v6-c-form__group">
-          <label class="pf-v6-c-form__label">
-            <span class="pf-v6-c-form__label-text">Alias name</span>
-          </label>
-          <input id="alias-name" class="pf-v6-c-form-control">
-        </div>
-
-        <div class="pf-v6-c-form__group">
-          <label class="pf-v6-c-form__label">
-            <span class="pf-v6-c-form__label-text">Members</span>
-          </label>
-          <textarea id="alias-members"
-                    rows="6"
-                    class="pf-v6-c-form-control"></textarea>
-        </div>
-
-      </form>
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-form__label">
+        <span class="pf-v6-c-form__label-text">Run as</span>
+        <input id="runas" class="pf-v6-c-form-control">
+      </label>
     </div>
 
-    <footer class="pf-v6-c-modal-box__footer">
-      <button id="alias-save" class="pf-v6-c-button pf-m-primary">Save</button>
-      <button id="alias-cancel" class="pf-v6-c-button pf-m-link">Cancel</button>
-    </footer>
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-check">
+        <input id="allow_all" type="checkbox" class="pf-v6-c-check__input">
+        <span class="pf-v6-c-check__label">Allow ALL</span>
+      </label>
+    </div>
 
-  </div>
-</div>
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-form__label">
+        <span class="pf-v6-c-form__label-text">Commands</span>
+      </label>
+      <select id="commands" multiple size="8" class="pf-v6-c-form-control"></select>
+    </div>
+
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-check">
+        <input id="nopasswd" type="checkbox" class="pf-v6-c-check__input">
+        <span class="pf-v6-c-check__label">
+          No password required (NOPASSWD)
+        </span>
+      </label>
+    </div>
+
+    <!-- Advanced sudo options -->
+    <div class="pf-v6-c-form__group pf-v6-u-mt-md">
+
+      <div class="pf-v6-c-form__label pf-v6-u-color-200 pf-v6-u-mb-sm">
+        <span class="pf-v6-c-form__label-text">
+          Advanced options
+        </span>
+      </div>
+
+      <label class="pf-v6-c-check">
+        <input id="noexec" type="checkbox" class="pf-v6-c-check__input">
+        <span class="pf-v6-c-check__label">
+          Prevent shell escape (NOEXEC)
+        </span>
+      </label>
+
+      <label class="pf-v6-c-check pf-v6-u-mt-sm">
+        <input id="setenv" type="checkbox" class="pf-v6-c-check__input">
+        <span class="pf-v6-c-check__label">
+          Allow environment variables (SETENV)
+        </span>
+      </label>
+
+      <label class="pf-v6-c-check pf-v6-u-mt-sm">
+        <input id="log_input" type="checkbox" class="pf-v6-c-check__input">
+        <span class="pf-v6-c-check__label">
+          Log input
+        </span>
+      </label>
+
+      <label class="pf-v6-c-check pf-v6-u-mt-sm">
+        <input id="log_output" type="checkbox" class="pf-v6-c-check__input">
+        <span class="pf-v6-c-check__label">
+          Log output
+        </span>
+      </label>
+
+    </div>
+
+  </form>
+</template>
+
+<!-- ===================== ALIAS FORM TEMPLATE ===================== -->
+<template id="alias-form-template">
+  <form id="alias-form" class="pf-v6-c-form">
+
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-form__label">
+        <span class="pf-v6-c-form__label-text">Alias type</span>
+      </label>
+      <select id="alias-type" class="pf-v6-c-form-control">
+        <option value="">Select alias type</option>
+        <option value="User_Alias">User Alias</option>
+        <option value="Runas_Alias">RunAs Alias</option>
+        <option value="Host_Alias">Host Alias</option>
+        <option value="Cmnd_Alias">Command Alias</option>
+      </select>
+    </div>
+
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-form__label">
+        <span class="pf-v6-c-form__label-text">Alias name</span>
+      </label>
+      <input id="alias-name" class="pf-v6-c-form-control">
+    </div>
+
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-form__label">
+        <span class="pf-v6-c-form__label-text">Members</span>
+      </label>
+      <textarea id="alias-members" rows="6" class="pf-v6-c-form-control"></textarea>
+    </div>
+
+  </form>
+</template>
+
+<!-- ===================== GROUP FORM TEMPLATE ===================== -->
+<template id="group-form-template">
+  <form id="group-form" class="pf-v6-c-form">
+
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-form__label">
+        <span class="pf-v6-c-form__label-text">Group</span>
+        <input id="group" class="pf-v6-c-form-control">
+      </label>
+    </div>
+
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-form__label">
+        <span class="pf-v6-c-form__label-text">Run as</span>
+        <input id="group-runas" class="pf-v6-c-form-control">
+      </label>
+    </div>
+
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-check">
+        <input id="group-allow-all" type="checkbox" class="pf-v6-c-check__input">
+        <span class="pf-v6-c-check__label">Allow ALL</span>
+      </label>
+    </div>
+
+    <div class="pf-v6-c-form__group">
+      <label class="pf-v6-c-form__label">
+        <span class="pf-v6-c-form__label-text">Commands</span>
+      </label>
+      <select id="group-commands" multiple size="8" class="pf-v6-c-form-control"></select>
+    </div>
+
+  </form>
+</template>
