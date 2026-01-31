@@ -102,7 +102,7 @@ cockpit.locale();
 
   async function renderRow(rule) {
     if (!ruleRowTemplate) {
-      ruleRowTemplate = await loadTemplate("templates/rule-row.html");
+      ruleRowTemplate = await loadTemplate("./templates/rule-row.html");
     }
 
     const commandsText = rule.all
@@ -144,7 +144,7 @@ cockpit.locale();
     }
   });
 
-  /* ===================== MODAL ===================== */
+  /* ===================== USER MODAL ===================== */
 
   function openModal(rule = null) {
     $("modal-backdrop").hidden = false;
@@ -186,22 +186,56 @@ cockpit.locale();
     }
   }
 
-  /* ===================== APPLY ===================== */
+  /* ===================== ALIAS MODAL ===================== */
+
+  function openAliasModal() {
+    $("alias-modal-backdrop").hidden = false;
+    document.body.classList.add("pf-v6-c-backdrop__open");
+  }
+
+  function closeAliasModal() {
+    $("alias-modal-backdrop").hidden = true;
+    document.body.classList.remove("pf-v6-c-backdrop__open");
+  }
+
+  function applyAlias() {
+    const type = $("alias-type").value;
+    const name = $("alias-name").value.trim();
+    const members = $("alias-members").value
+      .split("\n")
+      .map(m => m.trim())
+      .filter(Boolean);
+
+    if (!type) return alert("Alias type is required");
+    if (!name) return alert("Alias name is required");
+    if (members.length === 0) return alert("At least one alias member is required");
+
+    cockpit.spawn(
+      [PYTHON, BACKEND, "add-alias", type, name, ...members],
+      { superuser: "require", err: "message" }
+    )
+    .then(() => {
+      $("alias-form").reset();
+      closeAliasModal();
+      loadCommandCatalog();
+    })
+    .catch(err => {
+      alert(err.message || err);
+    });
+  }
+
+  /* ===================== APPLY USER RULE ===================== */
 
   function applyRule() {
     const user = $("user").value.trim();
-    if (!user) {
-      alert("User is required");
-      return;
-    }
+    if (!user) return alert("User is required");
 
     const runas = $("runas").value || "root";
     const mode  = $("nopasswd").checked ? "nopasswd" : "passwd";
     const selected = [...$("commands").selectedOptions].map(o => o.value);
 
     if (!$("allow_all").checked && selected.length === 0) {
-      alert("Select at least one command or choose Allow ALL");
-      return;
+      return alert("Select at least one command or choose Allow ALL");
     }
 
     const cmds = $("allow_all").checked ? "ALL" : selected.join(", ");
@@ -209,11 +243,12 @@ cockpit.locale();
     cockpit.spawn(
       [PYTHON, BACKEND, "update", user, runas, mode, cmds],
       { superuser: "require", err: "message" }
-    ).then(() => {
+    )
+    .then(() => {
       closeModal();
       loadRules();
-    }).catch(err => {
-      console.error("SAVE FAILED:", err);
+    })
+    .catch(err => {
       alert(err.message || "Failed to save sudo rule");
     });
   }
@@ -224,49 +259,9 @@ cockpit.locale();
     cockpit.spawn(
       [PYTHON, BACKEND, "delete", user],
       { superuser: "require", err: "message" }
-    ).then(loadRules)
-     .catch(err => alert(err.message));
-  }
-
-  /* ===================== CUSTOM COMMANDS ===================== */
-
-  function saveCustomCommand(cmd) {
-    const path = "/usr/share/cockpit/sudo-manager/commands.local";
-    const file = cockpit.file(path, { superuser: "require" });
-
-    file.read()
-      .catch(() => "")
-      .then(content => {
-        const lines = content.split("\n").filter(Boolean);
-
-        if (lines.includes(cmd) || availableCommands.includes(cmd)) {
-          selectCommandInUI(cmd);
-          return null;
-        }
-
-        return file.replace(content + cmd + "\n");
-      })
-      .then(result => {
-        if (result === null) return;
-
-        availableCommands.push(cmd);
-        addCommandToUI(cmd);
-      })
-      .catch(err => alert("Failed to save command: " + err.message));
-  }
-
-  function addCommandToUI(cmd) {
-    const o = document.createElement("option");
-    o.value = cmd;
-    o.textContent = cmd;
-    o.selected = true;
-    $("commands").appendChild(o);
-  }
-
-  function selectCommandInUI(cmd) {
-    [...$("commands").options].forEach(o => {
-      if (o.value === cmd) o.selected = true;
-    });
+    )
+    .then(loadRules)
+    .catch(err => alert(err.message));
   }
 
   /* ===================== RENDER ===================== */
@@ -275,31 +270,43 @@ cockpit.locale();
     const root = $("sudo-manager-app");
 
     try {
-      root.innerHTML = await loadTemplate("templates/main.html");
+      root.innerHTML = await loadTemplate("./templates/main.html");
 
-      $("add").onclick = () => openModal();
-      $("apply").onclick = applyRule;
-      $("cancel").onclick = closeModal;
-      $("allow_all").onchange = toggleCommands;
+      const addUser = $("add");
+      if (addUser) addUser.onclick = () => openModal();
 
-      $("add-custom-command").onclick = () => {
-        const input = $("custom-command");
-        const cmd = input.value.trim();
-        if (!cmd) return;
+      const addAlias = $("add-alias");
+      if (addAlias) addAlias.onclick = () => openAliasModal();
 
-        if (!cmd.startsWith("/")) {
-          alert("Command must be an absolute path");
-          return;
-        }
+      const apply = $("apply");
+      if (apply) apply.onclick = applyRule;
 
-        if (/[;&|$`]|&&|\|\|/.test(cmd)) {
-          alert("Unsafe characters in command");
-          return;
-        }
+      const cancel = $("cancel");
+      if (cancel) cancel.onclick = closeModal;
 
-        saveCustomCommand(cmd);
-        input.value = "";
-      };
+      const aliasSave = $("alias-save");
+      if (aliasSave) aliasSave.onclick = applyAlias;
+
+      const aliasCancel = $("alias-cancel");
+      if (aliasCancel) aliasCancel.onclick = closeAliasModal;
+
+      const allowAll = $("allow_all");
+      if (allowAll) allowAll.onchange = toggleCommands;
+
+      const addCmd = $("add-custom-command");
+      if (addCmd) {
+        addCmd.onclick = () => {
+          const input = $("custom-command");
+          const cmd = input.value.trim();
+          if (!cmd) return;
+
+          if (!cmd.startsWith("/")) return alert("Command must be an absolute path");
+          if (/[;&|$`]|&&|\|\|/.test(cmd)) return alert("Unsafe characters");
+
+          saveCustomCommand(cmd);
+          input.value = "";
+        };
+      }
 
       await loadCommandCatalog();
       loadRules();

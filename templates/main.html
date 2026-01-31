@@ -2,8 +2,11 @@
 <div class="pf-v6-c-toolbar pf-v6-u-mb-md">
   <div class="pf-v6-c-toolbar__content pf-v6-u-justify-content-flex-end">
     <div class="pf-v6-c-toolbar__item">
-      <button id="add" class="pf-v6-c-button pf-m-primary">
+      <button id="add-user" class="pf-v6-c-button pf-m-primary">
         Add sudo user
+      </button>
+      <button id="add-alias" class="pf-v6-c-button pf-m-primary">
+        Add Alias
       </button>
     </div>
   </div>
@@ -30,7 +33,7 @@
   </div>
 </div>
 
-<!-- ===================== MODAL ===================== -->
+<!-- ===================== USER MODAL ===================== -->
 <div class="pf-v6-c-backdrop" id="modal-backdrop" hidden>
 
   <div class="pf-v6-c-modal-box pf-m-md"
@@ -68,7 +71,7 @@
           </label>
         </div>
 
-	<div class="pf-v6-c-form__group">
+        <div class="pf-v6-c-form__group">
           <label class="pf-v6-c-form__label" for="commands">
             <span class="pf-v6-c-form__label-text">Commands</span>
           </label>
@@ -116,6 +119,63 @@
     <footer class="pf-v6-c-modal-box__footer">
       <button id="apply" class="pf-v6-c-button pf-m-primary">Save</button>
       <button id="cancel" class="pf-v6-c-button pf-m-link">Cancel</button>
+    </footer>
+
+  </div>
+</div>
+
+<!-- ===================== ADD ALIAS MODAL ===================== -->
+<div class="pf-v6-c-backdrop" id="alias-modal-backdrop" hidden>
+
+  <div class="pf-v6-c-modal-box pf-m-md"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="alias-modal-title">
+
+    <header class="pf-v6-c-modal-box__header">
+      <h1 class="pf-v6-c-modal-box__title" id="alias-modal-title">
+        Add Alias
+      </h1>
+    </header>
+
+    <div class="pf-v6-c-modal-box__body">
+      <form id="alias-form" class="pf-v6-c-form">
+
+        <div class="pf-v6-c-form__group">
+          <label class="pf-v6-c-form__label">
+            <span class="pf-v6-c-form__label-text">Alias type</span>
+          </label>
+          <select id="alias-type" class="pf-v6-c-form-control">
+            <option value="">Select alias type</option>
+            <option value="User_Alias">User Alias</option>
+            <option value="Runas_Alias">RunAs Alias</option>
+            <option value="Host_Alias">Host Alias</option>
+            <option value="Cmnd_Alias">Command Alias</option>
+          </select>
+        </div>
+
+        <div class="pf-v6-c-form__group">
+          <label class="pf-v6-c-form__label">
+            <span class="pf-v6-c-form__label-text">Alias name</span>
+          </label>
+          <input id="alias-name" class="pf-v6-c-form-control">
+        </div>
+
+        <div class="pf-v6-c-form__group">
+          <label class="pf-v6-c-form__label">
+            <span class="pf-v6-c-form__label-text">Members</span>
+          </label>
+          <textarea id="alias-members"
+                    rows="6"
+                    class="pf-v6-c-form-control"></textarea>
+        </div>
+
+      </form>
+    </div>
+
+    <footer class="pf-v6-c-modal-box__footer">
+      <button id="alias-save" class="pf-v6-c-button pf-m-primary">Save</button>
+      <button id="alias-cancel" class="pf-v6-c-button pf-m-link">Cancel</button>
     </footer>
 
   </div>

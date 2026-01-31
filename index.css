@@ -11,11 +11,26 @@
    Modal centering (Cockpit static modal fix)
    ================================ */
 
+/* --- User modal --- */
 #modal-backdrop[hidden] {
   display: none;
 }
 
 #modal-backdrop:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+/* --- Alias modal --- */
+#alias-modal-backdrop[hidden] {
+  display: none;
+}
+
+#alias-modal-backdrop:not([hidden]) {
   position: fixed;
   inset: 0;
   display: flex;

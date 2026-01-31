@@ -17,6 +17,16 @@ SUDOERS_DIR = Path("/etc/sudoers.d")
 APP_BASE = Path("/usr/share/cockpit/sudo-manager")
 TEMPLATE = APP_BASE / "templates/user.sudoers.tpl"
 
+# >>> Alias support
+ALIAS_FILE = SUDOERS_DIR / "cockpit-aliases"
+ALIAS_TEMPLATE = APP_BASE / "templates/aliases.tpl"
+
+# Marker string REQUIRED by list_rules()
+ALIAS_HEADER = (
+    "# Managed by Cockpit Sudo Manager\n"
+    "# DO NOT EDIT BY HAND\n\n"
+)
+
 COMMAND_SOURCES = [
     Path("/usr/share/cockpit/sudo-manager/sudo-commands.d"),
     Path("/etc/cockpit/sudo-manager/commands.local"),
@@ -29,6 +39,8 @@ SUDO_RE = re.compile(
     r"(?P<nopasswd>NOPASSWD:)?\s*(?P<cmds>.+)$"
 )
 
+ALIAS_NAME_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
+
 # ---------------- Helpers ----------------
 
 def die(msg):
@@ -36,7 +48,15 @@ def die(msg):
     sys.exit(1)
 
 def visudo_check(path: Path):
-    subprocess.run(["visudo", "-cf", str(path)], check=True)
+    proc = subprocess.run(
+        ["visudo", "-cf", str(path)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+
+    if proc.returncode != 0:
+        die(proc.stderr.strip() or "visudo validation failed")
 
 def normalize(cmd: str) -> str:
     return re.sub(r"\s+", " ", cmd.strip())
@@ -63,6 +83,50 @@ def render_template(user: str, rule_line: str) -> str:
            .replace("{{DATE}}", datetime.utcnow().isoformat())
            .replace("{{RULE}}", rule_line)
     )
+
+# ---------------- Alias helpers ----------------
+
+def validate_alias(alias_type, name, members):
+    if alias_type not in {"User_Alias", "Runas_Alias", "Host_Alias", "Cmnd_Alias"}:
+        die("Invalid alias type")
+
+    if not ALIAS_NAME_RE.match(name):
+        die("Alias name must be UPPERCASE with underscores")
+
+    if not members:
+        die("Alias must contain at least one member")
+
+    if alias_type == "Cmnd_Alias":
+        for m in members:
+            if not m.startswith("/"):
+                die(f"Command must be absolute path: {m}")
+            if re.search(r"[;&|$`]|&&|\|\|", m):
+                die(f"Unsafe characters in command: {m}")
+
+def render_alias(alias_type, name, members) -> str:
+    tpl = ALIAS_TEMPLATE.read_text()
+    return (
+        tpl.replace("{{ALIAS_TYPE}}", alias_type)
+           .replace("{{ALIAS_NAME}}", name)
+           .replace("{{ALIAS_MEMBERS}}", ", ".join(members))
+    )
+
+def add_alias(alias_type, name, members):
+    validate_alias(alias_type, name, members)
+
+    alias_line = render_alias(alias_type, name, members)
+
+    if not ALIAS_FILE.exists():
+        content = ALIAS_HEADER + alias_line + "\n"
+    else:
+        content = ALIAS_FILE.read_text()
+        if re.search(rf"^{alias_type}\s+{name}\s*=", content, re.MULTILINE):
+            die("Alias already exists")
+        content = content.rstrip() + "\n" + alias_line + "\n"
+
+    ALIAS_FILE.write_text(content)
+    ALIAS_FILE.chmod(0o440)
+    visudo_check(ALIAS_FILE)
 
 # ---------------- CATALOG ----------------
 
@@ -201,7 +265,8 @@ def usage():
         "  sudo-manager.py list\n"
         "  sudo-manager.py catalog\n"
         "  sudo-manager.py update <user> <runas> <passwd|nopasswd> <cmds|ALL>\n"
-        "  sudo-manager.py delete <user>"
+        "  sudo-manager.py delete <user>\n"
+        "  sudo-manager.py add-alias <type> <name> <member...>"
     )
 
 if len(sys.argv) < 2:
@@ -218,6 +283,8 @@ try:
         update_rule(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
     elif action == "delete" and len(sys.argv) == 3:
         delete_rule(sys.argv[2])
+    elif action == "add-alias" and len(sys.argv) >= 5:
+        add_alias(sys.argv[2], sys.argv[3], sys.argv[4:])
     else:
         usage()
 
