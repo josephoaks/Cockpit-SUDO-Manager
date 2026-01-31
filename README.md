@@ -47,28 +47,6 @@ The plugin is designed to:
 
 ---
 
-## Work in Progress / Planned Features
-
-The following items are **actively planned or under development**:
-
-- **Advanced sudo options**
-  - `NOEXEC`
-  - `SETENV`
-  - Command-specific flags
-
-- **Validation**
-  - `visudo` validation before applying changes
-  - Rollback on failure
-
-- **Audit & Logging**
-  - Optional journald integration
-  - Change history / metadata (who changed what, when)
-
-- **Role separation**
-  - Read-only vs admin UI access (Cockpit RBAC)
-
----
-
 ## Installation (Current – Manual)
 
 > Packaging is still in progress. Until then, installation is manual.
