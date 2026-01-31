@@ -51,12 +51,6 @@ The plugin is designed to:
 
 The following items are **actively planned or under development**:
 
-- **Aliases**
-  - User_Alias
-  - Host_Alias
-  - Cmnd_Alias
-  - Runas_Alias
-
 - **Group-based rules**
   - POSIX groups
   - Clear user vs group distinction in UI
