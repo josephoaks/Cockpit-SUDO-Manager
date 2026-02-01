@@ -24,6 +24,14 @@ The plugin is designed to:
 
 ---
 
+## Requirements
+
+- Cockpit ≥ 300
+- PatternFly 6
+- Python3.11+
+
+---
+
 ## Current Tested Platform
 
 | Component | Status |
@@ -34,6 +42,7 @@ The plugin is designed to:
 | Packaging | Manual install (see below) |
 
 > ⚠️ Only **SLES 16** & **SLE Micro 6.x** has been tested at this time.
+> ⛔Will now work on **SLE Micro 5.x** has been tested however limited Cockpit API's and PatternFly 5 prevents it.
 
 ---
 
