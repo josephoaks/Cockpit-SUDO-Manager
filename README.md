@@ -24,7 +24,7 @@ The plugin is designed to:
 
 ---
 
-## Current Working Platform
+## Current Tested Platform
 
 | Component | Status |
 |--------|--------|
@@ -33,7 +33,7 @@ The plugin is designed to:
 | Sudo | Standard `sudo` |
 | Packaging | Manual install (see below) |
 
-> ⚠️ Only **SLES 16** is supported at this time.
+> ⚠️ Only **SLES 16** & **SLE Micro 6.x** has been tested at this time.
 
 ---
 
