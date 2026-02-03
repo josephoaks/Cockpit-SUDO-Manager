@@ -26,7 +26,14 @@ import {
   Td,
 } from "@patternfly/react-table";
 
-import { EllipsisVIcon } from "@patternfly/react-icons";
+import {
+  Dropdown as PFDropdown,
+  DropdownList,
+  DropdownItem as PFDropdownItem,
+  MenuToggle,
+} from '@patternfly/react-core';
+
+import EllipsisVIcon from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon';
 
 import { spawnBackend } from "./utils/backend";
 import { loadCommandCatalog } from "./utils/catalog";
@@ -40,43 +47,37 @@ import { SudoAliasForm } from "./components/SudoAliasForm";
 
 function Dropdown({ label, children }) {
   const [open, setOpen] = useState(false);
-  const dropdownRef = React.useRef(null);
-
-  // Close dropdown when clicking outside
-  React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setOpen(false);
-      }
-    };
-
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [open]);
 
   return (
-    <div className="sudo-dropdown" ref={dropdownRef}>
-      <button
-        type="button"
-        className="sudo-dropdown-toggle"
-        onClick={() => setOpen(v => !v)}
-        aria-expanded={open}
-      >
-        {label}
-      </button>
-
-      {open && (
-        <ul className="sudo-dropdown-menu">
-          {React.Children.map(children, child =>
-            React.cloneElement(child, { onSelect: () => setOpen(false) })
-          )}
-        </ul>
+    <PFDropdown
+      isOpen={open}
+      onSelect={() => setOpen(false)}
+      onOpenChange={(isOpen) => setOpen(isOpen)}
+      toggle={(toggleRef) => (
+        <MenuToggle
+          ref={toggleRef}
+          onClick={() => setOpen(!open)}
+          isExpanded={open}
+          variant="primary"
+        >
+          {label}
+        </MenuToggle>
       )}
-    </div>
+    >
+      <DropdownList>
+        {React.Children.map(children, (child) => {
+          if (!child) return null;
+
+          // Clone child to add the close handler
+          return React.cloneElement(child, {
+            onClick: () => {
+              child.props.onClick?.();
+              setOpen(false);
+            }
+          });
+        })}
+      </DropdownList>
+    </PFDropdown>
   );
 }
 
@@ -102,11 +103,35 @@ function DropdownItem({ onClick, onSelect, children }) {
  * ------------------------- */
 
 function RowActions({ onEdit, onDelete }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <Dropdown label={<EllipsisVIcon />}>
-      <DropdownItem onClick={onEdit}>Edit</DropdownItem>
-      <DropdownItem onClick={onDelete}>Delete</DropdownItem>
-    </Dropdown>
+    <PFDropdown
+      isOpen={open}
+      onSelect={() => setOpen(false)}
+      onOpenChange={(isOpen) => setOpen(isOpen)}
+      toggle={(toggleRef) => (
+        <MenuToggle
+          ref={toggleRef}
+          onClick={() => setOpen(!open)}
+          isExpanded={open}
+          variant="plain"
+          aria-label="Actions"
+        >
+          <EllipsisVIcon />
+        </MenuToggle>
+      )}
+      popperProps={{ position: "right" }}
+    >
+      <DropdownList>
+        <PFDropdownItem onClick={() => { onEdit(); setOpen(false); }}>
+          Edit
+        </PFDropdownItem>
+        <PFDropdownItem onClick={() => { onDelete(); setOpen(false); }}>
+          Delete
+        </PFDropdownItem>
+      </DropdownList>
+    </PFDropdown>
   );
 }
 

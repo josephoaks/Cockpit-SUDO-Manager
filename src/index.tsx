@@ -2,9 +2,9 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 
 import "@patternfly/react-core/dist/styles/base.css";
+import "./app.scss";
 
 import Application from "./app.jsx";
-import "./app.scss";
 
 document.addEventListener("DOMContentLoaded", () => {
   const el = document.getElementById("app");
