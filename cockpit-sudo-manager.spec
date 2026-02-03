@@ -47,3 +47,5 @@ cp -a sudo-manager %{buildroot}/usr/share/cockpit/
 %changelog
 * Sat Jan 31 2026 Joseph Oaks
 - Initial RPM packaging
+* Tue Feb 03 2026 Joseph Oaks
+- React + PatternFly UI changes
