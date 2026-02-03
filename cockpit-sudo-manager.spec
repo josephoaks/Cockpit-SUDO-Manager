@@ -7,7 +7,7 @@
 #
 
 Name:           cockpit-sudo-manager
-Version:        0.2-1
+Version:        0.2.1
 Release:        1%{?dist}
 Summary:        Cockpit plugin for managing sudo rules safely
 
