@@ -1,4 +1,23 @@
-*.pyc
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+*.js.map
+*.css.map
+metafile.json
+
+# Python
 __pycache__/
-.env
-.venv/
+*.pyc
+*.pyo
+
+# Temporary files
+*.tmp
+.DS_Store
+*~
+
+# Keep src/ and backend/
+!src/
+!backend/
