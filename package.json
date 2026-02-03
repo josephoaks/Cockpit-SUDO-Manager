@@ -1,7 +1,7 @@
 {
   "name": "cockpit-sudo-manager",
   "description": "Cockpit plugin for managing sudo rules safely",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "type": "module",
   "main": "index.js",
   "repository": {
