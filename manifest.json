@@ -1,8 +1,11 @@
 {
+  "name": "sudo-manager",
+  "description": "Cockpit Sudo Policy Manager",
+  "version": "1.0",
   "menu": {
     "index": {
       "label": "Sudo Manager",
-      "order": 75,
+      "order": 80,
       "keywords": [
         {
           "matches": [
@@ -18,6 +21,7 @@
     }
   },
   "requires": {
+    "cockpit": ">=271",
     "superuser": true
   }
 }
